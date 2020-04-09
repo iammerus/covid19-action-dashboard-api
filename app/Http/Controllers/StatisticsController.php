@@ -38,6 +38,7 @@ class StatisticsController extends Controller
         return response($results);
     }
 
+
     /**
      * Display a listing of the resource.
      *
@@ -73,7 +74,7 @@ class StatisticsController extends Controller
     public function single($code)
     {
         $results = [];
-        $country = Country::whereCode($code)->single;
+        $country = Country::whereCode($code)->first();
 
         if (!$country) return [];
 
@@ -92,4 +93,33 @@ class StatisticsController extends Controller
         return response($results);
     }
 
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function singleLatest($code)
+    {
+        $results = [];
+        $country = Country::whereCode($code)->first();
+
+        if (!$country) return [];
+
+        // Get the latest data for the country
+        $latest = DailyStatistic::whereCountryId($country->id)->orderByDesc('date')->first();
+
+        if (!$latest) return [];
+
+        $results = [
+            'country' => $country->name,
+            'code' => $country->code,
+            'region' => $country->region,
+            'data' => [
+                'recovered' => $latest->recovered,
+                'deaths' => $latest->deaths,
+                'confirmed' => $latest->confirmed
+            ]];
+
+        return response($results);
+    }
 }
