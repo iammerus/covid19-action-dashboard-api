@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Country;
 use App\DailyStatistic;
 use DateTime;
+use Exception;
 use Illuminate\Console\Command;
 
 class FetchDataCommand extends Command
@@ -44,10 +45,13 @@ class FetchDataCommand extends Command
      * Execute the console command.
      *
      * @return void
-     * @throws \Exception
+     * @throws Exception
      */
     public function handle()
     {
+        // Boolean value indicating whether the database is 'fresh' i.e. we're populating it for the first time
+        $fresh = false;
+
         $this->alert("Fetching latest statistics data");
         $this->line('');
 
@@ -56,6 +60,10 @@ class FetchDataCommand extends Command
 
         // Get the date of the last entry
         $lastDate = DailyStatistic::query()->orderByDesc('date')->first();
+
+        // If last lookup returns null, that means we have no records, and we don't have any data so
+        // it's safe to assume, the database is fresh
+        if (!$lastDate) $fresh = true;
 
         // If we got a record, then set last date to that record's date, else set thee last date to a date in the past
        $lastDate = $lastDate ? new DateTime($lastDate->date) : (new DateTime('2000-01-01'));
@@ -66,14 +74,23 @@ class FetchDataCommand extends Command
 
         // Unguard the daily statistic model
         DailyStatistic::unguard();
+
+        // Counter variable
+        $records = 0;
+
         foreach (Country::all() as $country) {
             // If there's no entries for the country, ignore it
             if(!array_key_exists($country->name, $latest)) continue;
 
-            // Create a new laravel collection from the data array, then reverse it
+            // Create a new laravel collection from the data array
+            $countryData = collect($latest[$country->name]);
+
+            // Reverse the collection if this is not a fresh DB
             // Since the entries are in ascending order, well reverse the array, so the latest dates come early
             // That way, we get to the last entry we inserted quicker
-            $countryData = collect($latest[$country->name])->reverse();
+            if (!$fresh) {
+                $countryData = $countryData->reverse();
+            }
 
             // Counter variable.
             $total = 0;
@@ -82,7 +99,7 @@ class FetchDataCommand extends Command
             foreach ($countryData as $data) {
                 // If the date we are on is the last date, that means we've inserted all the records we needed to
                 // insert for this country, break out of the loop
-                if(!(new DateTime($data['date']))->diff($lastDate)->d) break;
+                if (!(new DateTime($data['date']))->diff($lastDate)->days) break;
 
                 // Insert the statistic record
                 DailyStatistic::create([
@@ -96,8 +113,16 @@ class FetchDataCommand extends Command
                 $total++;
             }
 
+            // Add the total for this country to the overall total
+            $records += $total;
+
+            // Print some info
             $this->comment("Finished inserting records for {$country->name}. Total records: {$total}");
         }
+
+        // Print status information
+        $this->line('');
+        $this->info("Task completed successfully. Total inserted records: {$records}");
     }
 
     /**
