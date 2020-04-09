@@ -12,7 +12,7 @@ class FetchDataCommand extends Command
 {
     protected $path = '';
 
-    protected $url = 'http://localhost:9000/timeseries.json';
+    protected $url = 'https://pomber.github.io/covid19/timeseries.json';
 
     /**
      * The name and signature of the console command.
