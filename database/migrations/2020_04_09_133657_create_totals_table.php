@@ -15,6 +15,10 @@ class CreateTotalsTable extends Migration
     {
         Schema::create('totals', function (Blueprint $table) {
             $table->id();
+            $table->integer('country_id');
+            $table->integer('confirmed');
+            $table->integer('recovered');
+            $table->integer('deaths');
             $table->timestamps();
         });
     }
