@@ -9,7 +9,7 @@ class DailyStatisticsTableSeeder extends Seeder
     public function __construct() {
         $json = file_get_contents(__DIR__ . '/data/timeseries.json');
 
-        $this->data = json_decode($json);
+        $this->data = json_decode($json, true);
     }
     /**
      * Run the database seeds.
@@ -23,13 +23,15 @@ class DailyStatisticsTableSeeder extends Seeder
         DailyStatistic::unguard();
 
         foreach ($countries as $country) {
+
+            if(!array_key_exists($country->name, $this->data)) continue;
             foreach ($this->data[$country->name] as $data) {
                 DailyStatistic::create([
                     'country_id' => $country->id,
-                    'date' => $data->date,
-                    'confirmed' => $data->confirmed,
-                    'deaths' => $data->deaths,
-                    'recovered' => $data->recovered
+                    'date' => $data['date'],
+                    'confirmed' => $data['confirmed'],
+                    'deaths' => $data['deaths'],
+                    'recovered' => $data['recovered']
                 ]);
             }
         }
